@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Operating Systems Course Manager - organise weekly modules, lesson notes and assignments.">
+  <title>OS Course Manager</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <!-- Shown only if JavaScript is turned off -->
+  <noscript>
+    <div class="banner banner-error">This application needs JavaScript. Please enable JavaScript in your browser and reload the page.</div>
+  </noscript>
+
+  <div class="app">
+    <!-- ===================== SIDEBAR ===================== -->
+    <aside id="sidebar" class="sidebar" aria-label="Main navigation">
+      <div class="brand">
+        <span class="brand-logo" aria-hidden="true">OS</span>
+        <div>
+          <p class="brand-title" id="brandCourseTitle">Operating Systems</p>
+          <p class="brand-subtitle">Course Manager</p>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a href="#/dashboard" data-nav="dashboard"><span aria-hidden="true">&#9638;</span> Dashboard</a>
+        <a href="#/weeks" data-nav="weeks"><span aria-hidden="true">&#9776;</span> All Weeks</a>
+        <a href="#/assignments" data-nav="assignments"><span aria-hidden="true">&#9998;</span> Assignments <span class="nav-badge" id="navAssignmentCount" hidden></span></a>
+        <a href="#/data" data-nav="data"><span aria-hidden="true">&#8681;</span> Backup &amp; Data</a>
+      </nav>
+
+      <div class="sidebar-section">
+        <h2 class="sidebar-heading">Weekly modules</h2>
+        <ul id="sidebarWeeks" class="sidebar-weeks"></ul>
+      </div>
+
+      <p class="sidebar-footer">Data is saved in this browser only. Export a backup regularly.</p>
+    </aside>
+    <div id="sidebarOverlay" class="sidebar-overlay" hidden></div>
+
+    <!-- ===================== MAIN AREA ===================== -->
+    <div class="main-wrap">
+      <header class="topbar">
+        <button type="button" id="menuToggle" class="btn btn-icon menu-toggle" aria-controls="sidebar" aria-expanded="false" aria-label="Open navigation menu">&#9776;</button>
+
+        <form id="searchForm" class="search-form" role="search">
+          <label for="searchInput" class="visually-hidden">Search weeks, topics and assignments</label>
+          <input id="searchInput" type="search" placeholder="Search weeks, topics, assignments..." autocomplete="off" maxlength="100">
+          <button type="submit" class="btn btn-primary">Search</button>
+        </form>
+
+        <button type="button" class="btn btn-primary topbar-add" data-action="add-week">+ Add Week</button>
+      </header>
+
+      <div id="appBanner" class="banner" hidden></div>
+
+      <!-- Each page is drawn inside <main> by script.js -->
+      <main id="main" class="main" tabindex="-1">
+        <p>Loading...</p>
+      </main>
+    </div>
+  </div>
+
+  <!-- Success / error messages appear here -->
+  <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+  <!-- Hidden file picker used by "Import backup" -->
+  <input type="file" id="importFile" accept=".json,application/json" hidden>
+
+  <!-- ===================== DIALOGS ===================== -->
+
+  <!-- Add / edit week -->
+  <dialog id="weekDialog" class="dialog" aria-labelledby="weekDialogTitle">
+    <form id="weekForm" novalidate>
+      <h2 id="weekDialogTitle">Add week</h2>
+      <input type="hidden" name="id">
+      <div class="field-row">
+        <div class="field">
+          <label for="weekNumber">Week number <span class="req" aria-hidden="true">*</span></label>
+          <input id="weekNumber" name="number" type="number" min="1" max="99" step="1" required>
+          <p class="field-error" data-error-for="number"></p>
+        </div>
+        <div class="field">
+          <label for="weekDate">Start date</label>
+          <input id="weekDate" name="date" type="date">
+          <p class="field-error" data-error-for="date"></p>
+        </div>
+      </div>
+      <div class="field">
+        <label for="weekTitle">Week title <span class="req" aria-hidden="true">*</span></label>
+        <input id="weekTitle" name="title" type="text" maxlength="150" required placeholder="e.g. CPU Scheduling">
+        <p class="field-error" data-error-for="title"></p>
+      </div>
+      <div class="field">
+        <label for="weekDescription">Description</label>
+        <textarea id="weekDescription" name="description" rows="4" maxlength="5000" placeholder="What is covered this week?"></textarea>
+        <p class="field-error" data-error-for="description"></p>
+      </div>
+      <div class="dialog-actions">
+        <button type="button" class="btn" data-close-dialog>Cancel</button>
+        <button type="submit" class="btn btn-primary">Save week</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Add / rename topic -->
+  <dialog id="topicDialog" class="dialog" aria-labelledby="topicDialogTitle">
+    <form id="topicForm" novalidate>
+      <h2 id="topicDialogTitle">Add topic</h2>
+      <input type="hidden" name="weekId">
+      <input type="hidden" name="topicId">
+      <div class="field">
+        <label for="topicTitle">Topic title <span class="req" aria-hidden="true">*</span></label>
+        <input id="topicTitle" name="title" type="text" maxlength="150" required placeholder="e.g. Round Robin Scheduling">
+        <p class="field-error" data-error-for="title"></p>
+      </div>
+      <div class="field field-check" id="topicOpenEditorField">
+        <input id="topicOpenEditor" name="openEditor" type="checkbox" checked>
+        <label for="topicOpenEditor">Open the content editor after creating</label>
+      </div>
+      <div class="dialog-actions">
+        <button type="button" class="btn" data-close-dialog>Cancel</button>
+        <button type="submit" class="btn btn-primary">Save topic</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Add / edit assignment -->
+  <dialog id="assignmentDialog" class="dialog" aria-labelledby="assignmentDialogTitle">
+    <form id="assignmentForm" novalidate>
+      <h2 id="assignmentDialogTitle">Add assignment</h2>
+      <input type="hidden" name="id">
+      <div class="field">
+        <label for="assignmentTitle">Title <span class="req" aria-hidden="true">*</span></label>
+        <input id="assignmentTitle" name="title" type="text" maxlength="150" required placeholder="e.g. Assignment 1: System Calls">
+        <p class="field-error" data-error-for="title"></p>
+      </div>
+      <div class="field">
+        <label for="assignmentDescription">Description</label>
+        <textarea id="assignmentDescription" name="description" rows="4" maxlength="5000" placeholder="Instructions, submission method, marks..."></textarea>
+        <p class="field-error" data-error-for="description"></p>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="assignmentDue">Due date</label>
+          <input id="assignmentDue" name="dueDate" type="date">
+          <p class="field-error" data-error-for="dueDate"></p>
+        </div>
+        <div class="field">
+          <label for="assignmentStatus">Status</label>
+          <select id="assignmentStatus" name="status">
+            <option value="not-started">Not started</option>
+            <option value="in-progress">In progress</option>
+            <option value="submitted">Submitted</option>
+            <option value="graded">Graded</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="assignmentWeek">Related week (optional)</label>
+        <select id="assignmentWeek" name="weekId"></select>
+      </div>
+      <div class="dialog-actions">
+        <button type="button" class="btn" data-close-dialog>Cancel</button>
+        <button type="submit" class="btn btn-primary">Save assignment</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Generic "Are you sure?" dialog -->
+  <dialog id="confirmDialog" class="dialog dialog-small" aria-labelledby="confirmTitle" aria-describedby="confirmMessage">
+    <form method="dialog">
+      <h2 id="confirmTitle">Are you sure?</h2>
+      <p id="confirmMessage" class="confirm-message"></p>
+      <div class="dialog-actions">
+        <button type="submit" value="cancel" id="confirmCancel" class="btn">Cancel</button>
+        <button type="submit" value="confirm" id="confirmOk" class="btn btn-danger">Confirm</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Editor: insert table -->
+  <dialog id="tableDialog" class="dialog dialog-small" aria-labelledby="tableDialogTitle">
+    <form id="tableForm" novalidate>
+      <h2 id="tableDialogTitle">Insert table</h2>
+      <div class="field-row">
+        <div class="field">
+          <label for="tableRows">Body rows (1-30)</label>
+          <input id="tableRows" name="rows" type="number" min="1" max="30" value="3" required>
+          <p class="field-error" data-error-for="rows"></p>
+        </div>
+        <div class="field">
+          <label for="tableCols">Columns (1-10)</label>
+          <input id="tableCols" name="cols" type="number" min="1" max="10" value="3" required>
+          <p class="field-error" data-error-for="cols"></p>
+        </div>
+      </div>
+      <div class="field field-check">
+        <input id="tableHeader" name="header" type="checkbox" checked>
+        <label for="tableHeader">Include a header row</label>
+      </div>
+      <div class="dialog-actions">
+        <button type="button" class="btn" data-close-dialog>Cancel</button>
+        <button type="submit" class="btn btn-primary">Insert table</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Editor: insert / edit code block -->
+  <dialog id="codeDialog" class="dialog" aria-labelledby="codeDialogTitle">
+    <form id="codeForm" novalidate>
+      <h2 id="codeDialogTitle">Code block</h2>
+      <div class="field">
+        <label for="codeText">Code (spaces and line breaks are kept exactly)</label>
+        <textarea id="codeText" name="code" rows="12" class="code-input" spellcheck="false" placeholder="#include &lt;stdio.h&gt;"></textarea>
+        <p class="field-error" data-error-for="code"></p>
+      </div>
+      <div class="dialog-actions">
+        <button type="button" class="btn" data-close-dialog>Cancel</button>
+        <button type="submit" class="btn btn-primary">Save code block</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Editor: insert image / diagram -->
+  <dialog id="imageDialog" class="dialog" aria-labelledby="imageDialogTitle">
+    <form id="imageForm" novalidate>
+      <h2 id="imageDialogTitle">Insert image or diagram</h2>
+      <div class="field">
+        <label for="imageFile">Choose an image from your computer</label>
+        <input id="imageFile" name="file" type="file" accept="image/png,image/jpeg,image/gif,image/webp">
+        <p class="hint">Large photos are resized automatically. Images are stored inside your saved data, so they use storage space.</p>
+      </div>
+      <div class="field">
+        <label for="imageUrl">...or paste an online image address (needs internet to display)</label>
+        <input id="imageUrl" name="url" type="url" placeholder="https://example.com/diagram.png">
+      </div>
+      <p class="field-error" data-error-for="file"></p>
+      <div class="field">
+        <label for="imageAlt">Short description (for accessibility)</label>
+        <input id="imageAlt" name="alt" type="text" maxlength="200" placeholder="e.g. Process state diagram">
+      </div>
+      <div class="field">
+        <label for="imageCaption">Caption (optional)</label>
+        <input id="imageCaption" name="caption" type="text" maxlength="300" placeholder="Figure 1: Five-state process model">
+      </div>
+      <div class="dialog-actions">
+        <button type="button" class="btn" data-close-dialog>Cancel</button>
+        <button type="submit" class="btn btn-primary">Insert image</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Editor: insert link -->
+  <dialog id="linkDialog" class="dialog dialog-small" aria-labelledby="linkDialogTitle">
+    <form id="linkForm" novalidate>
+      <h2 id="linkDialogTitle">Insert link</h2>
+      <div class="field">
+        <label for="linkUrl">Web address <span class="req" aria-hidden="true">*</span></label>
+        <input id="linkUrl" name="url" type="url" required placeholder="https://">
+        <p class="field-error" data-error-for="url"></p>
+      </div>
+      <div class="field">
+        <label for="linkText">Text to show</label>
+        <input id="linkText" name="text" type="text" maxlength="200">
+      </div>
+      <div class="dialog-actions">
+        <button type="button" class="btn" data-close-dialog>Cancel</button>
+        <button type="submit" class="btn btn-primary">Insert link</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="script.js"></script>
+</body>
+</html>
